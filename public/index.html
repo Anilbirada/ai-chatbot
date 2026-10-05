@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071A33">
+  <title>Question Paper Maker - DSATM</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <style>
+    :root{
+      --navy:#0B1F3A;
+      --navy-2:#071A33;
+      --navy-3:#132B4C;
+      --gold:#C9A24B;
+      --gold-2:#E4C779;
+      --cream:#FBF8F1;
+      --soft:#EEF2F8;
+      --line:#C9D1DF;
+      --text:#16243A;
+      --muted:#66758B;
+      --white:#fff;
+      --danger:#A31D2D;
+      --success:#146C43;
+      --shadow:0 18px 50px rgba(5,24,52,.12);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:linear-gradient(180deg,#f5f7fb 0%,#eaf0f7 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    .app-shell{min-height:100vh;display:flex;flex-direction:column}
+    .topbar{height:72px;background:linear-gradient(135deg,var(--navy-2),var(--navy));color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:50;box-shadow:0 8px 26px rgba(5,24,52,.2)}
+    .brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .brand-mark{width:38px;height:38px;border:1px solid rgba(228,199,121,.55);border-radius:12px;background:linear-gradient(135deg,#0f2b50,#08182e);display:grid;place-items:center;color:var(--gold-2);font-weight:900;box-shadow:inset 0 1px rgba(255,255,255,.12)}
+    .brand-title{font-size:16px;font-weight:800;line-height:1.15;letter-spacing:.2px}
+    .brand-sub{font-size:11px;color:#aab7ca;margin-top:2px}
+    .top-actions{display:flex;align-items:center;gap:10px}
+    .top-status{font-size:11px;display:flex;align-items:center;gap:7px;color:#cad4e3;padding:7px 10px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.04)}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:#8c98a7;box-shadow:0 0 0 4px rgba(140,152,167,.13)}
+    .status-dot.ok{background:#5fe0a8;box-shadow:0 0 0 4px rgba(95,224,168,.12)}
+    .status-dot.bad{background:#ff7687;box-shadow:0 0 0 4px rgba(255,118,135,.12)}
+
+    .workspace{display:grid;grid-template-columns:380px 1fr;min-height:calc(100vh - 72px)}
+    .sidebar{background:#f8fafc;border-right:1px solid #dde3ec;padding:18px;position:relative;z-index:5}
+    .sidebar-inner{position:sticky;top:90px;display:flex;flex-direction:column;gap:12px}
+    .panel{background:#fff;border:1px solid #dde3ec;border-radius:18px;box-shadow:0 8px 30px rgba(12,30,55,.06);overflow:hidden}
+    .panel-head{padding:14px 16px;border-bottom:1px solid #e7ebf1;display:flex;justify-content:space-between;align-items:center}
+    .panel-head h2{font-size:13px;margin:0;font-weight:800;letter-spacing:.3px}
+    .panel-body{padding:14px 16px}
+    .small-note{font-size:11px;line-height:1.55;color:var(--muted)}
+    .drop-zone{border:1.5px dashed #c6cfdd;border-radius:16px;background:linear-gradient(135deg,#fbfcfe,#f3f7fc);padding:16px;text-align:center;transition:.2s}
+    .drop-zone.drag{border-color:var(--gold);background:#fffaf0}
+    .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+    .btn{border:1px solid #ced7e5;background:#fff;color:var(--navy);border-radius:11px;padding:10px 12px;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s,box-shadow .15s,border-color .15s,background .15s}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(11,31,58,.08);border-color:#aebbd0}
+    .btn.primary{background:linear-gradient(135deg,var(--navy),#17365e);color:#fff;border-color:var(--navy);box-shadow:0 10px 24px rgba(11,31,58,.18)}
+    .btn.gold{background:linear-gradient(135deg,#d7b865,#bb9134);color:#101d30;border-color:#c59d49}
+    .btn.ghost{background:#f7f9fc}
+    .btn.danger{color:var(--danger);border-color:#f0c4cb;background:#fff8f8}
+    .btn.icon{width:38px;height:38px;padding:0;border-radius:10px}
+    .btn.wide{width:100%}
+    .thumb-wrap{margin-top:12px;display:none;gap:10px;align-items:center;padding:10px;border-radius:12px;background:#f6f8fb;border:1px solid #e2e7ef}
+    .thumb-wrap.show{display:flex}
+    .thumb{width:76px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #d6dde8;background:#fff}
+    .thumb-meta{min-width:0;flex:1}
+    .thumb-name{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .thumb-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+    .field-label{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:800;color:#485a73;margin:0 0 6px}
+    textarea.notes{width:100%;min-height:136px;resize:vertical;border:1px solid #d5dde8;border-radius:12px;padding:11px 12px;outline:none;background:#fbfcfe;color:var(--text);font-size:12px;line-height:1.5}
+    textarea.notes:focus{border-color:#a8b9d1;box-shadow:0 0 0 3px rgba(74,104,145,.12)}
+    .listen-row{display:flex;gap:8px;margin-top:8px}
+    .recording{color:var(--danger);font-weight:800}
+    .main{min-width:0;display:flex;flex-direction:column}
+    .main-toolbar{padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #dde3ec;background:rgba(248,250,252,.88);backdrop-filter:blur(14px);position:sticky;top:72px;z-index:30}
+    .toolbar-title{display:flex;align-items:center;gap:12px;min-width:0}
+    .toolbar-title h1{margin:0;font-size:16px;line-height:1.1}
+    .toolbar-title p{margin:4px 0 0;font-size:11px;color:var(--muted)}
+    .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .preview-stage{flex:1;padding:30px;overflow:auto;display:flex;justify-content:center}
+    .empty-card{width:min(680px,100%);margin:auto;padding:36px 30px;background:#fff;border:1px solid #dde4ee;border-radius:24px;box-shadow:var(--shadow);text-align:center}
+    .empty-icon{width:74px;height:74px;margin:0 auto 14px;border-radius:22px;display:grid;place-items:center;background:linear-gradient(135deg,#eef4fb,#fff7e7);border:1px solid #dfd7bf;color:var(--gold);font-size:30px}
+    .empty-card h2{margin:0;font-size:20px;color:var(--navy)}
+    .empty-card p{margin:9px auto 0;color:var(--muted);font-size:13px;line-height:1.65;max-width:560px}
+
+    .status-bar{display:none;position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:100;min-width:min(92vw,520px);padding:12px 16px;border-radius:14px;background:var(--navy);color:#fff;box-shadow:0 20px 48px rgba(4,19,40,.25);font-size:12px}
+    .status-bar.show{display:flex;align-items:center;gap:10px}
+    .status-bar.error{background:#6e1722}.status-bar.success{background:#0d5b39}
+    .spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;flex:0 0 auto}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .modal{position:fixed;inset:0;background:rgba(5,18,35,.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:90;padding:20px}
+    .modal.show{display:flex}
+    .camera-card{width:min(760px,100%);background:#081a31;border:1px solid rgba(255,255,255,.12);border-radius:22px;box-shadow:0 30px 90px rgba(0,0,0,.35);padding:16px;color:#fff}
+    .camera-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.camera-head h3{margin:0;font-size:15px}
+    .camera-stage{border-radius:16px;overflow:hidden;background:#000;aspect-ratio:4/3;display:grid;place-items:center}
+    #cameraVideo{width:100%;height:100%;object-fit:cover}
+    .camera-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+
+    /* Printable paper */
+    .paper-board{display:flex;flex-direction:column;align-items:center;gap:24px;padding-bottom:40px}
+    .page{width:794px;height:1123px;background:#fff;box-shadow:0 18px 70px rgba(3,20,43,.2);position:relative;overflow:hidden;flex:0 0 794px;color:var(--text)}
+    .page-inner{position:absolute;inset:0;padding:0 42px 40px}
+    .page-footer{position:absolute;left:42px;right:42px;bottom:13px;border-top:1px solid var(--line);padding-top:8px;display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:#67758a}
+    .page-footer:after{content:"";position:absolute;left:0;right:0;bottom:-14px;height:4px;background:var(--gold)}
+    .page-footer strong{color:#4b5a70}
+    .header-hero{height:138px;background:linear-gradient(135deg,var(--navy-2),var(--navy));border-bottom:4px solid var(--gold);margin:0 -42px;padding:12px 42px;display:grid;grid-template-columns:95px 1fr 1px 200px 95px;align-items:center;gap:12px;color:#fff}
+    .logo-box{display:flex;justify-content:center;align-items:center;height:100px}.logo-left{max-width:90px;max-height:96px;object-fit:contain}.logo-right{max-width:88px;max-height:84px;object-fit:contain}
+    .org-title{font-weight:900;font-size:16px;line-height:1.06;letter-spacing:-.2px}.org-sub{font-size:10px;color:var(--gold-2);font-style:italic;margin-top:6px}.vline{height:72px;background:rgba(228,199,121,.82)}
+    .accred{font-size:8.7px;line-height:1.5;color:#e3e8ef}.accred b{color:#fff}.dept-title{text-align:center;font-weight:900;font-size:14px;margin:12px 0 10px}.dept-title .underline{display:block;width:90px;height:3px;background:var(--gold);margin:6px auto 0;border-radius:99px}
+    .info-card{border:1px solid var(--navy);overflow:hidden}.info-title{background:var(--navy);color:#fff;text-align:center;font-size:14px;font-weight:900;padding:8px 10px}.info-grid{display:grid;grid-template-columns:1fr 1fr}.info-cell{min-height:28px;border-top:1px solid var(--line);display:grid;grid-template-columns:110px 1fr;align-items:center;padding:0 10px;font-size:9.7px}.info-cell:nth-child(odd){background:var(--soft)}.info-label{color:#5c6a7d;font-weight:800}.info-value{font-weight:800;font-size:10px}.info-full{grid-column:1/-1;border-top:1px solid var(--line);min-height:30px;display:flex;align-items:center;padding:0 10px;font-size:9.5px}.instructions{background:var(--cream);border-top:1px solid var(--line);min-height:32px;display:grid;grid-template-columns:90px 1fr;align-items:center;border-left:8px solid var(--gold);font-size:9.5px}.instructions b{padding-left:8px;color:#82621f}.instructions span{font-weight:800}
+    .compact-head{height:42px;background:var(--navy);border-bottom:3px solid var(--gold);margin:0 -42px;padding:0 42px;display:flex;align-items:center;justify-content:space-between;color:#fff;font-size:8.8px;font-weight:800;letter-spacing:.2px}.compact-head .r{opacity:.9;font-weight:700}
+    .section-wrap{margin-top:12px}.question-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9.3px}.question-table thead th{background:var(--navy);color:var(--gold);padding:6px 5px;text-align:center;font-size:9.2px;font-weight:900}.question-table th:nth-child(1){width:56px}.question-table th:nth-child(2){width:auto}.question-table th:nth-child(3){width:60px}.question-table th:nth-child(4){width:66px}.question-table th:nth-child(5){width:60px}.q-group{border:1px solid var(--line);margin:0 0 0;border-top:0;break-inside:avoid}.q-band{background:#f7eccb;color:#16243a;font-weight:900;text-align:center;padding:4px;border-bottom:1px solid var(--line);font-size:10px}.q-row{display:grid;grid-template-columns:56px 1fr 60px 66px 60px;background:#fff;border-bottom:1px solid var(--line);min-height:46px}.q-row.alt{background:#fffaf1}.q-cell{padding:7px 8px;border-right:1px solid var(--line);display:flex;align-items:center}.q-cell:last-child{border-right:0}.q-no{justify-content:center}.circle{width:26px;height:26px;background:var(--navy);color:#fff;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:9.5px;box-shadow:inset 0 1px rgba(255,255,255,.08)}.q-text{align-items:flex-start;flex-direction:column;justify-content:center;line-height:1.25;font-size:9.7px;white-space:pre-wrap}.q-edit{outline:0;min-width:0;width:100%;border-radius:4px}.q-edit[contenteditable="true"]:focus{background:#f1f6fc;box-shadow:inset 0 0 0 1px #c5d3e6}.q-meta{justify-content:center;text-align:center;font-weight:900;font-size:10px}.or-row{height:20px;background:#fff;color:#a77919;display:grid;place-items:center;font-weight:900;border-bottom:1px solid var(--line);font-size:9px}.figure{width:100%;margin-top:4px}.figure svg{width:100%;height:auto;display:block}.figure-caption{text-align:center;font-style:italic;color:#9b7421;font-weight:800;margin-top:2px}.outcomes{margin-top:12px;border:1px solid var(--navy)}.outcomes-head{background:var(--navy);color:#fff;padding:6px 10px;font-size:9.5px;font-weight:900;letter-spacing:.2px}.outcome-row{display:grid;grid-template-columns:68px 1fr;border-top:1px solid var(--line);min-height:24px;align-items:center;font-size:8.9px}.outcome-row:nth-child(odd){background:var(--cream)}.co-pill{justify-self:center;background:var(--gold);color:#13243a;padding:2px 6px;border-radius:999px;font-weight:900;font-size:8.5px}.end-note{text-align:center;margin-top:8px;color:#6a7687;font-size:8.5px}
+
+    .scale-shell{transform-origin:top center}
+    @media(max-width:1100px){.workspace{grid-template-columns:330px 1fr}.sidebar{padding:14px}.preview-stage{padding:24px}}
+    @media(max-width:860px){.workspace{display:block}.sidebar{border-right:0;border-bottom:1px solid #dde3ec}.sidebar-inner{position:static}.main-toolbar{top:72px}.preview-stage{padding:12px 10px}.topbar{padding:0 14px}.brand-sub,.top-status{display:none}.toolbar-actions{gap:6px}.paper-board{gap:8px;padding-bottom:16px}.page{width:min(100%,794px);flex-basis:auto;transform:none!important;margin-bottom:0}}
+    @media(max-width:540px){.topbar{height:64px}.workspace{min-height:calc(100vh - 64px)}.main-toolbar{top:64px;padding:12px 14px}.toolbar-title p{display:none}.sidebar{padding:8px}.action-grid{grid-template-columns:1fr}.preview-stage{padding:8px}.page{width:100%;min-width:0;transform:none!important}.header-hero{padding-left:30px;padding-right:30px;margin-left:-30px;margin-right:-30px;grid-template-columns:76px 1fr 1px 120px 72px;gap:8px}.page-inner{padding-left:30px;padding-right:30px}.page-footer{left:30px;right:30px}}
+
+    @media print{body{background:#fff}.topbar,.sidebar,.main-toolbar,.status-bar,.modal{display:none!important}.workspace{display:block}.preview-stage{padding:0;display:block;overflow:visible}.paper-board{gap:0;padding:0}.page{box-shadow:none;page-break-after:always;break-after:page;transform:none!important;margin:0!important}.page:last-child{page-break-after:auto}.page-footer:after{display:block}}
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">QP</div>
+      <div>
+        <div class="brand-title">Question Paper Maker</div>
+        <div class="brand-sub">Premium IAT-2 generator • DSATM Information Science & Engineering</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="top-status" id="apiStatus"><span class="status-dot" id="apiDot"></span><span id="apiStatusText">Checking AI service…</span></div>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <section class="panel">
+          <div class="panel-head"><h2>1 · Add source</h2><span class="small-note">Photo / file</span></div>
+          <div class="panel-body">
+            <div class="drop-zone" id="dropZone">
+              <div style="font-size:24px;margin-bottom:6px">📷</div>
+              <div style="font-weight:800;font-size:12px">Bring in a question paper</div>
+              <div class="small-note" style="margin-top:4px">Use the camera, upload an image, or drag a JPG/PNG here.</div>
+              <div class="action-grid">
+                <button class="btn" id="cameraBtn">◉ Take photo</button>
+                <button class="btn" id="uploadBtn">↥ Upload image</button>
+              </div>
+              <input id="fileInput" type="file" accept="image/*,.pdf,.txt,.rtf,.csv,.md,.doc,.docx,application/pdf" capture="environment" hidden>
+            </div>
+            <div class="thumb-wrap" id="thumbWrap">
+              <img class="thumb" id="thumb" alt="Question paper preview">
+              <div class="thumb-meta">
+                <div class="thumb-name" id="thumbName">Selected image</div>
+                <div class="thumb-sub" id="thumbMeta">Ready to extract</div>
+              </div>
+              <button class="btn icon danger" id="removeImageBtn" title="Remove image">×</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>2 · Speak or type</h2><span class="small-note">en-IN</span></div>
+          <div class="panel-body">
+            <label class="field-label" for="notes">Teacher notes</label>
+            <textarea class="notes" id="notes" placeholder="Example: question 1: illustrate data link layer design issues, 10 marks, CO2, L2"></textarea>
+            <div class="listen-row">
+              <button class="btn" id="speakBtn">🎙 Speak questions</button>
+              <span class="small-note" id="speechState" style="align-self:center">Tap and speak in English.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>3 · Generate</h2><span class="small-note">AI extraction</span></div>
+          <div class="panel-body">
+            <button class="btn primary wide" id="makeBtn">✦ Make question paper</button>
+            <div class="small-note" style="margin-top:9px">The first run creates the paper. After that, the button becomes <b>Update paper</b> so new edits can be applied without rewriting unrelated questions.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>Quick controls</h2><span class="small-note">Live paper</span></div>
+          <div class="panel-body">
+            <div class="action-grid">
+              <button class="btn ghost" id="refitBtn">⤢ Re-fit pages</button>
+              <button class="btn ghost" id="addPairBtn">＋ Add pair</button>
+              <button class="btn ghost" id="removePairBtn">− Remove last pair</button>
+              <button class="btn danger" id="newPaperBtn">↺ New paper</button>
+            </div>
+            <button class="btn gold wide" id="downloadBtn" style="margin-top:8px">⇩ Download PDF</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="main-toolbar">
+        <div class="toolbar-title">
+          <div>
+            <h1>Premium A4 preview</h1>
+            <p>Click any text, marks, CO, RBT or header detail to edit it directly.</p>
+          </div>
+        </div>
+        <div class="toolbar-actions">
+          <button class="btn ghost" id="zoomOut">−</button>
+          <button class="btn ghost" id="zoomReset">100%</button>
+          <button class="btn ghost" id="zoomIn">＋</button>
+        </div>
+      </div>
+      <div class="preview-stage" id="previewStage">
+        <div class="empty-card" id="emptyState">
+          <div class="empty-icon">✦</div>
+          <h2>Create your first premium question paper</h2>
+          <p>Upload the sample/photo, speak or type questions, and the AI converts the source into the DSATM-style navy + gold IAT-2 format. The layout is editable before export.</p>
+        </div>
+        <div class="paper-board scale-shell" id="paperBoard" style="display:none"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar"><span class="spinner" id="statusSpinner"></span><span id="statusText">Working…</span></div>
+
+<div class="modal" id="cameraModal">
+  <div class="camera-card">
+    <div class="camera-head"><h3>Take a photo of the question paper</h3><button class="btn icon" id="cameraClose">×</button></div>
+    <div class="camera-stage"><video id="cameraVideo" playsinline autoplay muted></video></div>
+    <div class="camera-foot"><button class="btn ghost" id="cameraCancel">Cancel</button><button class="btn gold" id="captureBtn">● Capture</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const state = {
+    data: null,
+    imageData: null,
+    imageName: '',
+    updating: false,
+    zoom: 1,
+    cameraStream: null,
+    recognition: null,
+    recording: false,
+  };
+
+  const DEFAULT_DATA = {
+    subject:'', code:'', semester:'', maxMarks:'', batch:'', duration:'', date:'', dept:'ISE',
+    instructions:'Answer any five questions choosing one question from each part',
+    questions:[],
+    outcomes:[]
+  };
+
+  function status(message, kind='normal', busy=false){
+    $('statusText').textContent = message;
+    $('statusBar').className = 'status-bar show' + (kind==='error'?' error':'') + (kind==='success'?' success':'');
+    $('statusSpinner').style.display = busy ? 'inline-block' : 'none';
+    if (!busy) setTimeout(() => $('statusBar').classList.remove('show'), 2600);
+  }
+
+  async function checkHealth(){
+    try{
+      const r = await fetch('/health');
+      const j = await r.json();
+      $('apiStatusText').textContent = j.api_key_configured ? `AI ready • ${j.model}` : 'Add Anthropic API key';
+      $('apiDot').className = 'status-dot ' + (j.api_key_configured ? 'ok' : 'bad');
+    }catch(e){
+      $('apiStatusText').textContent = 'Service unavailable';
+      $('apiDot').className = 'status-dot bad';
+    }
+  }
+
+  function escapeHtml(value){
+    return String(value ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+
+  function sanitizeText(value){ return String(value ?? '').replace(/\r/g,''); }
+
+  function renderInline(text){
+    // Keep text editable while preserving simple superscripts such as x^3 and 3rd.
+    let html = escapeHtml(sanitizeText(text));
+    html = html.replace(/\^(\d+)/g, '<sup>$1</sup>');
+    html = html.replace(/(\b\d+)(st|nd|rd|th)\b/gi, '$1<sup>$2</sup>');
+    html = html.replace(/\n/g,'<br>');
+    return html;
+  }
+
+  function normalizeFigure(fig){
+    if (!fig || !Array.isArray(fig.nodes) || !Array.isArray(fig.edges)) return null;
+    return {
+      caption: String(fig.caption || 'Fig.1'),
+      nodes: fig.nodes.map(n => ({id:String(n.id ?? ''),x:Number(n.x ?? 0),y:Number(n.y ?? 0)})),
+      edges: fig.edges.map(e => [String(e?.[0] ?? ''), String(e?.[1] ?? ''), e?.[2] ?? ''])
+    };
+  }
+
+  function figureSvg(fig){
+    const f = normalizeFigure(fig); if (!f) return '';
+    const nodeMap = new Map(f.nodes.map(n => [n.id,n]));
+    const edgeParts = f.edges.map(edge => {
+      const a=nodeMap.get(edge[0]), b=nodeMap.get(edge[1]); if(!a||!b)return '';
+      const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+      const label=escapeHtml(edge[2] === '' ? '' : edge[2]);
+      const w=Math.max(34, label.length*7+14);
+      return `<g><line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#8A98AC" stroke-width="2"/>${label?`<rect x="${mx-w/2}" y="${my-8}" width="${w}" height="16" rx="7" fill="#fff" stroke="#C9A24B" stroke-width="1.4"/><text x="${mx}" y="${my+3.2}" text-anchor="middle" font-size="8.5" font-weight="800" fill="#20334f">${label}</text>`:''}</g>`;
+    }).join('');
+    const nodeParts=f.nodes.map(n=>`<g><circle cx="${n.x}" cy="${n.y}" r="11" fill="#0B1F3A" stroke="#C9A24B" stroke-width="1.5"/><text x="${n.x}" y="${n.y+3}" text-anchor="middle" font-size="8.5" font-weight="900" fill="#fff">${escapeHtml(n.id)}</text></g>`).join('');
+    return `<div class="figure"><svg viewBox="0 0 280 120" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${escapeHtml(f.caption)}">${edgeParts}${nodeParts}</svg><div class="figure-caption">${escapeHtml(f.caption)}</div></div>`;
+  }
+
+  function editable(type, value, extra=''){
+    return `<span class="q-edit" contenteditable="true" data-edit-type="${type}" ${extra}>${type==='text' ? renderInline(value) : escapeHtml(value)}</span>`;
+  }
+
+  function groupedQuestions(){
+    const qs = Array.isArray(state.data?.questions) ? state.data.questions : [];
+    const groups=[];
+    for(let i=0;i<qs.length;i+=2){ groups.push({index:Math.floor(i/2)+1, first:qs[i], second:qs[i+1] || {no:(qs[i]?.no||0)+1,text:'',marks:'',co:'',rbt:'',figure:null}}); }
+    return groups;
+  }
+
+  function questionGroupHtml(g){
+    const first=g.first, second=g.second;
+    const row=(q,alt=false)=>`<div class="q-row ${alt?'alt':''}" data-question-no="${q.no}">
+      <div class="q-cell q-no"><div class="circle">${escapeHtml(q.no)}</div></div>
+      <div class="q-cell q-text"><div class="q-edit" contenteditable="true" data-question-no="${q.no}" data-field="text">${renderInline(q.text)}</div>${figureSvg(q.figure)}</div>
+      <div class="q-cell q-meta"><div class="q-edit" contenteditable="true" data-question-no="${q.no}" data-field="marks">${escapeHtml(q.marks)}</div></div>
+      <div class="q-cell q-meta"><div class="q-edit" contenteditable="true" data-question-no="${q.no}" data-field="co">${escapeHtml(q.co)}</div></div>
+      <div class="q-cell q-meta"><div class="q-edit" contenteditable="true" data-question-no="${q.no}" data-field="rbt">${escapeHtml(q.rbt)}</div></div>
+    </div>`;
+    return `<div class="q-group" data-group-index="${g.index}">
+      <div class="q-band">Question-${g.index}</div>
+      ${row(first,false)}
+      <div class="or-row">OR</div>
+      ${row(second,true)}
+    </div>`;
+  }
+
+  function headerHtml(firstPage=true){
+    if(!firstPage){
+      return `<div class="compact-head"><span>DAYANANDA SAGAR ACADEMY OF TECHNOLOGY AND MANAGEMENT</span><span class="r">IAT-2&nbsp; | &nbsp;${escapeHtml(state.data.subject || 'SUBJECT')}&nbsp; | &nbsp;${escapeHtml(state.data.code || 'CODE')}</span></div>`;
+    }
+    const d=state.data;
+    return `<div class="header-hero">
+      <div class="logo-box"><img class="logo-left" src="/logo-left.png" alt="Dayananda Sagar crest"></div>
+      <div><div class="org-title">Dayananda Sagar Academy of<br>Technology and Management</div><div class="org-sub">(Autonomous Institute under VTU)</div></div>
+      <div class="vline"></div>
+      <div class="accred">Affiliated to VTU<br>Approved by AICTE<br>Accredited by NAAC with <b>A+ Grade</b><br>4 Programs Accredited by NBA<br>(CSE, ISE, ECE, MECH)</div>
+      <div class="logo-box"><img class="logo-right" src="/logo-right.png" alt="NAAC A+ seal"></div>
+    </div>
+    <div class="dept-title"><span class="q-edit" contenteditable="true" data-header-field="departmentName">${escapeHtml(d.departmentName || 'Department of Information Science and Engineering')}</span><span class="underline"></span></div>
+    <div class="info-card">
+      <div class="info-title">Second Internal Assessment Test (IAT-2)</div>
+      <div class="info-grid">
+        ${infoCell('Subject','subject','100%','',true)}${infoCell('Subject Code','code','', '',false)}
+        ${infoCell('Semester','semester','', '',true)}${infoCell('Max. Marks','maxMarks','', '',false)}
+        ${infoCell('Batch','batch','', '',true)}${infoCell('Duration','duration','', '',false)}
+        ${infoCell('Date of IAT','date','', '',true)}${infoCell('Teaching Department','dept','', '',false)}
+        <div class="info-full"><span class="info-label" style="width:118px">RBT Levels:</span><span class="q-edit" contenteditable="true" data-header-field="rbtLevels">${escapeHtml(d.rbtLevels || 'L1-Remember, L2-Understand, L3-Apply, L4-Analyze, L5-Evaluate, L6-Create')}</span></div>
+      </div>
+      <div class="instructions"><b>Instructions:</b><span class="q-edit" contenteditable="true" data-header-field="instructions">${escapeHtml(d.instructions)}</span></div>
+    </div>`;
+  }
+
+  function infoCell(label,field,width,unused,odd){
+    const v=state.data[field] || '';
+    return `<div class="info-cell"><span class="info-label">${label}:</span><span class="q-edit info-value" contenteditable="true" data-header-field="${field}">${escapeHtml(v)}</span></div>`;
+  }
+
+  function questionTableHead(){
+    return `<div class="question-head"><table class="question-table"><thead><tr><th>Sl. No</th><th>Questions</th><th>Marks</th><th>CO's</th><th>RBT L</th></tr></thead></table></div>`;
+  }
+
+  function makeGroupNode(g){
+    const holder=document.createElement('div'); holder.innerHTML=questionGroupHtml(g); return holder.firstElementChild;
+  }
+
+  function outcomesNode(){
+    const div=document.createElement('div'); div.className='outcomes';
+    const head=document.createElement('div'); head.className='outcomes-head'; head.textContent='COURSE OUTCOMES'; div.appendChild(head);
+    (state.data.outcomes||[]).forEach((o,i)=>{ const row=document.createElement('div'); row.className='outcome-row'; row.innerHTML=`<span class="co-pill" contenteditable="true" data-outcome-index="${i}" data-outcome-field="0">${escapeHtml(o[0])}</span><span class="q-edit" contenteditable="true" data-outcome-index="${i}" data-outcome-field="1">${escapeHtml(o[1])}</span>`; div.appendChild(row); });
+    const end=document.createElement('div'); end.className='end-note'; end.textContent='- End of Question Paper -'; div.appendChild(end); return div;
+  }
+
+  function footerHtml(pageNo){
+    return `<div class="page-footer"><span><strong>${escapeHtml(state.data.code || 'CODE')}</strong> &nbsp;|&nbsp; ${escapeHtml(state.data.subject || 'Subject')} &nbsp;|&nbsp; IAT-2 &nbsp;|&nbsp; Dept. of ISE</span><span>Page ${pageNo}</span></div>`;
+  }
+
+  function createPage(firstPage, pageNo){
+    const page=document.createElement('div'); page.className='page'; page.dataset.pageNo=pageNo;
+    const inner=document.createElement('div'); inner.className='page-inner';
+    inner.insertAdjacentHTML('beforeend', headerHtml(firstPage));
+    const section=document.createElement('div'); section.className='section-wrap';
+    section.insertAdjacentHTML('beforeend', questionTableHead());
+    const groups=document.createElement('div'); groups.className='groups'; section.appendChild(groups);
+    inner.appendChild(section);
+    page.appendChild(inner);
+    page.insertAdjacentHTML('beforeend', footerHtml(pageNo));
+    return page;
+  }
+
+  function contentLimit(page){
+    // Allow a tiny overrun from sub-pixel text measurements without starting a new page
+    // for every single question pair. The generated question paper should be denser.
+    return page.clientHeight + 6;
+  }
+
+  function fitPages(){
+    if(!state.data) return;
+    const board=$('paperBoard'); board.innerHTML='';
+    const groups=groupedQuestions();
+    let page=createPage(true,1); board.appendChild(page);
+    let groupCursor=0;
+    let currentGroups=page.querySelector('.groups');
+    for(const g of groups){
+      const node=makeGroupNode(g); currentGroups.appendChild(node);
+      if(page.scrollHeight > contentLimit(page)){
+        // Never split a question group. If it made the current page overflow, move the entire group.
+        currentGroups.removeChild(node);
+        const pages=board.querySelectorAll('.page');
+        page=createPage(false,pages.length+1); board.appendChild(page);
+        currentGroups=page.querySelector('.groups');
+        currentGroups.appendChild(node);
+      }
+      groupCursor++;
+    }
+    // Course outcomes must remain a single block.
+    if((state.data.outcomes||[]).length){
+      const block=outcomesNode();
+      const section=page.querySelector('.section-wrap'); section.appendChild(block);
+      if(page.scrollHeight > contentLimit(page) && page.querySelectorAll('.q-group').length){
+        section.removeChild(block);
+        const pages=board.querySelectorAll('.page');
+        const p2=createPage(false,pages.length+1); board.appendChild(p2);
+        p2.querySelector('.section-wrap').appendChild(block);
+      }
+    }
+    wireEditable();
+    applyZoom();
+  }
+
+  function wireEditable(){
+    $('paperBoard').querySelectorAll('[contenteditable="true"]').forEach(el=>{
+      el.addEventListener('input',()=>{
+        if(!state.data)return;
+        const qn=el.dataset.questionNo;
+        if(qn){
+          const q=state.data.questions.find(x=>String(x.no)===String(qn)); if(q){ q[el.dataset.field]=el.innerText.replace(/\u00a0/g,' '); }
+          return;
+        }
+        if(el.dataset.headerField){
+          state.data[el.dataset.headerField]=el.innerText.replace(/\u00a0/g,' ');
+          return;
+        }
+        if(el.dataset.outcomeIndex){
+          const idx=Number(el.dataset.outcomeIndex); if(!state.data.outcomes[idx])state.data.outcomes[idx]=['','']; state.data.outcomes[idx][Number(el.dataset.outcomeField)]=el.innerText.trim();
+        }
+      });
+    });
+  }
+
+  function displayData(data){
+    state.data = structuredClone(data || DEFAULT_DATA);
+    state.data.departmentName = state.data.departmentName || 'Department of Information Science and Engineering';
+    state.data.rbtLevels = state.data.rbtLevels || 'L1-Remember, L2-Understand, L3-Apply, L4-Analyze, L5-Evaluate, L6-Create';
+    state.data.questions = Array.isArray(state.data.questions) ? state.data.questions : [];
+    state.data.outcomes = Array.isArray(state.data.outcomes) ? state.data.outcomes : [];
+    $('emptyState').style.display='none'; $('paperBoard').style.display='flex';
+    $('makeBtn').textContent='↻ Update paper'; state.updating=true;
+    fitPages();
+  }
+
+  function cleanTranscript(){
+    const n=$('notes'); return n.value.trim();
+  }
+
+  function normalizeQuestionBlocks(rawText){
+    const cleaned = (rawText || '').replace(/\r/g, '').replace(/\u00a0/g, ' ').trim();
+    if (!cleaned) return [];
+
+    const byParagraph = cleaned
+      .split(/\n\s*\n+/)
+      .map(s => s.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+
+    const blocks = byParagraph.length ? byParagraph : cleaned.split(/\n+/).map(s => s.trim()).filter(Boolean);
+    const items = [];
+
+    for (const block of blocks) {
+      const qa = block.replace(/\s+/g, ' ').trim();
+      if (!qa || qa.length < 12) continue;
+      const questionNo = qa.match(/(?:question|Q)\s*[:#-]?\s*(\d+)/i) || qa.match(/^(\d+)\s*[:.\-)]/);
+      const text = qa
+        .replace(/^(?:question|Q)\s*[:#-]?\s*\d+\s*[:.\-)]\s*/i, '')
+        .replace(/^\d+\s*[:.\-)]\s*/, '')
+        .replace(/\s*\(\s*\d+\s*marks?\s*\)\s*$/i, '')
+        .replace(/\s*\b(?:CO|course outcome)\s*\d*\b.*$/i, '')
+        .replace(/\s*\bL[1-6]\b.*$/i, '')
+        .trim();
+
+      const matches = qa.match(/(\d+)\s*marks?/i); const marks = matches ? matches[1] : '10';
+      const coMatch = qa.match(/CO\s*\d+/i); const co = coMatch ? coMatch[0].toUpperCase().replace(/\s+/, '') : 'CO1';
+      const rbtMatch = qa.match(/L[1-6]/i); const rbt = rbtMatch ? rbtMatch[0].toUpperCase() : 'L2';
+
+      const safeText = text || qa.replace(/\s*\b(?:\d+)\s*marks?\b.*$/i, '').replace(/\s*CO\s*\d+.*$/i, '').replace(/\s*L[1-6].*$/i, '').trim();
+      if (safeText.length >= 8) {
+        items.push({ no: Number(questionNo?.[1] || items.length + 1), text: safeText, marks, co, rbt, figure: null });
+      }
+    }
+
+    if (!items.length) {
+      const sentences = cleaned.split(/(?<=[.!?])\s+|\n+/).map(s => s.trim()).filter(Boolean);
+      sentences.slice(0, 10).forEach((sentence, idx) => {
+        const title = sentence.replace(/^(?:question|Q)\s*[:#-]?\s*\d+\s*[:.\-)]\s*/i, '').trim();
+        const peer = title || sentence;
+        if (!peer) return;
+        items.push({ no: idx + 1, text: peer, marks: '10', co: `CO${(idx % 5) + 1}`, rbt: 'L2', figure: null });
+      });
+    }
+
+    while (items.length % 2 !== 0) {
+      items.push({ no: items.length + 1, text: 'Alternative question', marks: '10', co: 'CO1', rbt: 'L2', figure: null });
+    }
+
+    return items;
+  }
+
+  function buildFastQuestionPaperFromText(rawText, maybeSubject='Data Structures and Algorithms') {
+    const questions = normalizeQuestionBlocks(rawText);
+    if (!questions.length) return null;
+
+    return {
+      subject: maybeSubject,
+      code: '21CS32',
+      semester: '3',
+      maxMarks: String((questions.length || 1) * 10),
+      batch: '2024',
+      duration: '2 Hours',
+      date: new Date().toISOString().slice(0, 10),
+      dept: 'Department of Information Science and Engineering',
+      departmentName: 'Department of Information Science and Engineering',
+      rbtLevels: 'L1-Remember, L2-Understand, L3-Apply, L4-Analyze, L5-Evaluate, L6-Create',
+      instructions: 'Answer all questions. Each question carries marks as indicated.',
+      questions,
+      outcomes: [
+        ['CO1', 'Apply engineering concepts to solve problems.'],
+        ['CO2', 'Analyse algorithmic and design-based questions.'],
+        ['CO3', 'Implement, evaluate, and justify engineering solutions.']
+      ]
+    };
+  }
+
+  function parseJsonObject(text){
+    const cleaned=text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+    const m=cleaned.match(/\{[\s\S]*\}/); if(!m) throw new Error('The AI did not return a JSON object.');
+    return JSON.parse(m[0]);
+  }
+
+  function buildLocalDemoPaper(prompt){
+    const raw = (prompt || '').trim() || 'Question 1: Explain the difference between stack and queue. 10 marks, CO1, L2';
+    const questions = normalizeQuestionBlocks(raw);
+    if (!questions.length) return buildFastQuestionPaperFromText(raw, 'Data Structures and Algorithms');
+    return {
+      subject: 'Data Structures and Algorithms',
+      code: '21CS32',
+      semester: '3',
+      maxMarks: String((questions.length || 1) * 10),
+      batch: '2024',
+      duration: '2 Hours',
+      date: new Date().toISOString().slice(0, 10),
+      dept: 'Department of Information Science and Engineering',
+      departmentName: 'Department of Information Science and Engineering',
+      rbtLevels: 'L1-Remember, L2-Understand, L3-Apply, L4-Analyze, L5-Evaluate, L6-Create',
+      instructions: 'Answer any five questions. Each question carries equal marks.',
+      questions,
+      outcomes: [
+        ['CO1', 'Apply appropriate data structures to solve engineering problems.'],
+        ['CO2', 'Analyse algorithm design and their complexity for given scenarios.'],
+        ['CO3', 'Implement and evaluate efficient programming solutions.']
+      ]
+    };
+  }
+
+  async function makePaper(){
+    if(!state.imageData && !cleanTranscript()){
+      status('Add a photo or type/speak the questions first.','error'); return;
+    }
+
+    const mode=state.updating && state.data ? 'update' : 'create';
+    const prompt=cleanTranscript() || '[Use the attached photo only]';
+    const quickPaper = buildFastQuestionPaperFromText(prompt);
+    if (quickPaper) {
+      displayData(quickPaper);
+      status('Fast question extraction complete and converted to the college template.', 'success');
+      return;
+    }
+
+    status(mode==='update'?'Updating the current paper…':'Reading the source and building the paper…','normal',true);
+    $('makeBtn').disabled=true;
+    try{
+      const body={prompt,image:state.imageData,mode}; if(mode==='update')body.existing=state.data;
+      const r=await fetch('/api/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      let j={}; try{j=await r.json()}catch(e){throw new Error('Server returned an invalid response.');}
+      if(!r.ok) {
+        if (j.code === 'missing_api_key' || j.error?.toLowerCase().includes('anthropic') || j.error?.toLowerCase().includes('api key')) {
+          const demo = buildLocalDemoPaper(prompt);
+          displayData(demo);
+          status('No valid Anthropic key is configured. A responsive demo paper was generated locally.', 'success');
+          return;
+        }
+        throw new Error(j.error || 'AI extraction failed.');
+      }
+      const parsed=parseJsonObject(j.text || '');
+      displayData(parsed);
+      status('Question paper updated successfully.','success');
+    }catch(e){
+      console.error(e); status(e.message || 'Something went wrong.','error');
+    }finally{ $('makeBtn').disabled=false; }
+  }
+
+  function compressImage(fileOrBlob){
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader(); reader.onload=()=>{ const img=new Image(); img.onload=()=>{
+        const max=1800; const scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+        const w=Math.max(1,Math.round(img.naturalWidth*scale)), h=Math.max(1,Math.round(img.naturalHeight*scale));
+        const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',0.82));
+      }; img.onerror=()=>reject(new Error('Could not read the image.')); img.src=reader.result;}; reader.onerror=()=>reject(reader.error||new Error('Could not read file.')); reader.readAsDataURL(fileOrBlob);
+    });
+  }
+
+  async function readPdfText(file){
+    try {
+      const pdfjs = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      let text = '';
+      for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+        const page = await pdf.getPage(pageNo);
+        const content = await page.getTextContent();
+        text += content.items.map(item => item.str).join(' ') + '\n';
+      }
+      return text.trim();
+    } catch (error) {
+      console.warn('PDF extraction failed:', error);
+      return '';
+    }
+  }
+
+  async function extractTextFromFile(file){
+    const lowerName = (file.name || '').toLowerCase();
+    if (file.type.startsWith('image/')) {
+      const dataUrl = await compressImage(file);
+      return { kind: 'image', text: '', dataUrl, name: file.name || 'Camera photo' };
+    }
+    if (file.type === 'application/pdf' || lowerName.endsWith('.pdf')) {
+      const pdfText = await readPdfText(file);
+      return { kind: 'pdf', text: pdfText, name: file.name || 'Document.pdf' };
+    }
+    if (file.type.startsWith('text/') || /\.(txt|md|csv|rtf)$/i.test(lowerName)) {
+      return { kind: 'text', text: await file.text(), name: file.name || 'Document.txt' };
+    }
+    return { kind: 'unknown', text: '', name: file.name || 'File' };
+  }
+
+  async function setImage(file, displayName){
+    if(!file)return;
+    const lowerName = (file.name || '').toLowerCase();
+    try{
+      if (file.type.startsWith('image/') || lowerName.match(/\.(png|jpg|jpeg|webp|bmp)$/i)) {
+        status('Optimizing photo…','normal',true);
+        state.imageData=await compressImage(file); state.imageName=displayName || file.name || 'Camera photo';
+        $('thumb').src=state.imageData; $('thumbName').textContent=state.imageName; $('thumbMeta').textContent='Compressed to a maximum of 1800 px'; $('thumbWrap').classList.add('show');
+        status('Photo ready. Converting to the question paper template…','success');
+        makePaper();
+        return;
+      }
+
+      status('Reading uploaded file…','normal',true);
+      const extracted = await extractTextFromFile(file);
+      if (extracted.text) {
+        $('notes').value = extracted.text.trim();
+        state.imageData = null;
+        state.imageName = extracted.name;
+        $('thumbWrap').classList.remove('show');
+        status('Uploaded file read successfully. Building the college template…','success');
+        makePaper();
+        return;
+      }
+
+      status('This file type is not supported yet. Use an image, PDF, or text file.','error');
+    }catch(e){ status(e.message || 'Could not prepare image.','error'); }
+  }
+
+  $('uploadBtn').addEventListener('click',()=> $('fileInput').click());
+  $('fileInput').addEventListener('change',e=>{ if(e.target.files?.[0])setImage(e.target.files[0],e.target.files[0].name); e.target.value=''; });
+  $('removeImageBtn').addEventListener('click',()=>{ state.imageData=null; state.imageName=''; $('thumbWrap').classList.remove('show'); $('thumb').src=''; });
+  ['dragenter','dragover'].forEach(ev=>$('dropZone').addEventListener(ev,e=>{e.preventDefault();$('dropZone').classList.add('drag')}));
+  ['dragleave','drop'].forEach(ev=>$('dropZone').addEventListener(ev,e=>{e.preventDefault();$('dropZone').classList.remove('drag')}));
+  $('dropZone').addEventListener('drop',e=>{const f=e.dataTransfer.files?.[0];if(f){setImage(f,f.name)}});
+
+  async function openCamera(){
+    if(!navigator.mediaDevices?.getUserMedia){status('This browser does not support camera access. Use Upload image instead.','error');return;}
+    try{
+      state.cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+      $('cameraVideo').srcObject=state.cameraStream; $('cameraModal').classList.add('show');
+    }catch(e){ status('Camera permission was blocked. Allow camera access or use Upload image.','error'); }
+  }
+  function closeCamera(){ if(state.cameraStream){state.cameraStream.getTracks().forEach(t=>t.stop());state.cameraStream=null;} $('cameraModal').classList.remove('show'); }
+  $('cameraBtn').addEventListener('click',openCamera); $('cameraClose').addEventListener('click',closeCamera); $('cameraCancel').addEventListener('click',closeCamera);
+  $('captureBtn').addEventListener('click',()=>{ const v=$('cameraVideo'); if(!v.videoWidth)return; const c=document.createElement('canvas'); const scale=Math.min(1,1800/Math.max(v.videoWidth,v.videoHeight)); c.width=Math.round(v.videoWidth*scale); c.height=Math.round(v.videoHeight*scale); const ctx=c.getContext('2d'); ctx.drawImage(v,0,0,c.width,c.height); c.toBlob(blob=>{ if(blob){setImage(blob,'Camera capture.jpg');closeCamera();} },'image/jpeg',0.82); });
+
+  $('speakBtn').addEventListener('click',()=>{
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){status('Speech recognition is not supported in this browser. Chrome is recommended.','error');return;}
+    if(state.recording && state.recognition){state.recognition.stop();return;}
+    const r=new SR(); state.recognition=r; state.recording=true; r.lang='en-IN'; r.continuous=true; r.interimResults=true;
+    let sessionText=''; const baseText=$('notes').value.trim();
+    r.onstart=()=>{ $('speakBtn').textContent='■ Stop speaking'; $('speechState').innerHTML='<span class="recording">● Listening…</span>'; };
+    r.onresult=(e)=>{ sessionText=''; for(let i=0;i<e.results.length;i++){ sessionText += e.results[i][0].transcript; } const n=$('notes'); n.value=(baseText?baseText+' ':'')+sessionText.trim(); };
+    r.onerror=()=>{ state.recording=false; $('speakBtn').textContent='🎙 Speak questions'; $('speechState').textContent='Speech recognition error.'; };
+    r.onend=()=>{ state.recording=false; $('speakBtn').textContent='🎙 Speak questions'; $('speechState').textContent='Tap and speak in English.'; };
+    r.start();
+  });
+
+  $('makeBtn').addEventListener('click',makePaper);
+  $('refitBtn').addEventListener('click',()=>{if(state.data){fitPages();status('Pages re-fitted.','success')}});
+  $('addPairBtn').addEventListener('click',()=>{if(!state.data){status('Create a paper first.','error');return;} const n=state.data.questions.length+1; state.data.questions.push({no:n,text:'New question',marks:10,co:'',rbt:'',figure:null},{no:n+1,text:'Alternative question',marks:10,co:'',rbt:'',figure:null}); fitPages();});
+  $('removePairBtn').addEventListener('click',()=>{if(!state.data || state.data.questions.length<2){status('There is no question pair to remove.','error');return;} state.data.questions.splice(-2); fitPages();});
+  $('newPaperBtn').addEventListener('click',()=>{ if(!confirm('Start a new question paper? Unsaved changes in the current preview will be cleared.'))return; state.data=null;state.updating=false;state.imageData=null;state.imageName=''; $('thumbWrap').classList.remove('show');$('notes').value='';$('emptyState').style.display='block';$('paperBoard').style.display='none';$('makeBtn').textContent='✦ Make question paper'; status('New paper ready.','success'); });
+
+  async function downloadPdf(){
+    if(!state.data){status('Create a question paper first.','error');return;}
+    status('Preparing the final A4 PDF…','normal',true); fitPages();
+    await new Promise(r=>setTimeout(r,80));
+    const {jsPDF}=window.jspdf||{}; if(!jsPDF){status('PDF library did not load. Check your internet connection.','error');return;}
+    const pages=[...document.querySelectorAll('.page')]; const pdf=new jsPDF({orientation:'portrait',unit:'px',format:[794,1123],compress:true});
+    for(let i=0;i<pages.length;i++){
+      const canvas=await html2canvas(pages[i],{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false});
+      const img=canvas.toDataURL('image/jpeg',0.96);
+      if(i)pdf.addPage([794,1123],'portrait'); pdf.addImage(img,'JPEG',0,0,794,1123,undefined,'FAST');
+    }
+    pdf.save('Question_Paper_IAT2.pdf'); status('PDF downloaded.','success');
+  }
+  $('downloadBtn').addEventListener('click',downloadPdf);
+
+  function applyZoom(){ const board=$('paperBoard'); if(!board)return; board.style.transform=`scale(${state.zoom})`; board.style.transformOrigin='top center'; }
+  function setZoom(v){state.zoom=Math.min(1.1,Math.max(.55,v)); $('zoomReset').textContent=Math.round(state.zoom*100)+'%'; applyZoom();}
+  $('zoomIn').addEventListener('click',()=>setZoom(state.zoom+.1)); $('zoomOut').addEventListener('click',()=>setZoom(state.zoom-.1)); $('zoomReset').addEventListener('click',()=>setZoom(1));
+
+  // Allow browser navigation to bring the preview back to a sensible state.
+  window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();downloadPdf();}});
+  checkHealth();
+})();
+</script>
+</body>
+</html>
