@@ -246,14 +246,32 @@ git push -u origin main
 
 **Never commit `.env`.** It is ignored by `.gitignore`.
 
-## 12. Deploy on Railway
+## 12. Deploy on Render
+
+The repository includes `render.yaml` with the Python web service build command,
+Gunicorn start command, and `/health` health check.
+
+For a new deployment, create a **Blueprint** in Render from this repository and
+apply the `render.yaml` settings. Adding `render.yaml` does not by itself update
+an existing service unless that service is managed as a Blueprint. For an
+existing Web Service, open **Settings > Build & Deploy** and set:
+
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:** `gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120`
+- **Health Check Path:** `/health`
+
+The Start Command must be the Gunicorn command above, not your GitHub username or
+repository name. Under **Environment**, add `ANTHROPIC_API_KEY` and any optional
+variables described below. Then save the changes and trigger a deploy.
+
+## 13. Deploy on Railway
 
 1. Create a Railway project.
 2. Deploy from your GitHub repository.
 3. Railway will use the included `Procfile`:
 
 ```text
-gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
+web: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
 ```
 
 4. Add these Variables in Railway:
@@ -270,7 +288,7 @@ You do **not** need to create an Anthropic key inside Railway; create it in the 
 5. Open **Settings > Networking > Generate Domain**.
 6. Open the generated Railway domain.
 
-## 13. Health check
+## 14. Health check
 
 Open:
 
@@ -282,7 +300,7 @@ or locally:
 
 The response tells you whether the AI key is configured, whether password protection is enabled, the rate limit, and the selected model.
 
-## 14. Recommended first test
+## 15. Recommended first test
 
 Use the supplied sample paper image or a clear photo of one. You can also paste text such as:
 
@@ -293,12 +311,12 @@ question 2: Infer short notes on the HDLC protocol and Point-to-Point Protocol, 
 
 The app should produce the same two-choice grouping pattern used by the supplied sample IAT-2 paper.
 
-## 15. Notes on browser permissions
+## 16. Notes on browser permissions
 
 - Camera access normally requires **localhost** or **HTTPS**.
 - Speech recognition is browser-dependent; current Chrome builds are recommended.
 - PDF export runs in the browser, so the CDN libraries must load. An internet connection is recommended for export.
 
-## 16. No API key is included
+## 17. No API key is included
 
-There is deliberately **no real Anthropic secret** anywhere in these files. You must create your own Anthropic API key and add it locally in `.env` or in Railway Variables.
+There is deliberately **no real Anthropic secret** anywhere in these files. You must create your own Anthropic API key and add it locally in `.env` or in your hosting provider's environment variables.
